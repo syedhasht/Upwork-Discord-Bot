@@ -1,0 +1,451 @@
+{
+    "data": {
+        "search": {
+            "universalSearchNuxt": {
+                "userJobSearchV1": {
+                    "paging": {
+                        "total": 4711,
+                        "offset": 10,
+                        "count": 10
+                    },
+                    "facets": {
+                        "jobType": [
+                            {
+                                "key": "fixed",
+                                "value": 1651
+                            },
+                            {
+                                "key": "hourly",
+                                "value": 3060
+                            },
+                            {
+                                "key": "weekly_retainer",
+                                "value": 0
+                            }
+                        ],
+                        "workload": [
+                            {
+                                "key": "part_time",
+                                "value": 3581
+                            },
+                            {
+                                "key": "full_time",
+                                "value": 2573
+                            },
+                            {
+                                "key": "as_needed,part_time",
+                                "value": 3683
+                            },
+                            {
+                                "key": "as_needed",
+                                "value": 1753
+                            },
+                            {
+                                "key": "none",
+                                "value": 1651
+                            }
+                        ],
+                        "clientHires": [
+                            {
+                                "key": "0",
+                                "value": 1598
+                            },
+                            {
+                                "key": "1-9",
+                                "value": 1215
+                            },
+                            {
+                                "key": "10-",
+                                "value": 1898
+                            }
+                        ],
+                        "durationV3": [
+                            {
+                                "key": "ongoing",
+                                "value": 2256
+                            },
+                            {
+                                "key": "week",
+                                "value": 2315
+                            },
+                            {
+                                "key": "month",
+                                "value": 3108
+                            },
+                            {
+                                "key": "semester",
+                                "value": 1985
+                            }
+                        ],
+                        "amount": [
+                            {
+                                "key": "5000-",
+                                "value": 94
+                            },
+                            {
+                                "key": "*",
+                                "value": 1651
+                            },
+                            {
+                                "key": "0-99",
+                                "value": 488
+                            },
+                            {
+                                "key": "100-499",
+                                "value": 556
+                            },
+                            {
+                                "key": "1000-4999",
+                                "value": 300
+                            },
+                            {
+                                "key": "500-999",
+                                "value": 212
+                            }
+                        ],
+                        "contractorTier": [
+                            {
+                                "key": "1",
+                                "value": 138
+                            },
+                            {
+                                "key": "2",
+                                "value": 2602
+                            },
+                            {
+                                "key": "3",
+                                "value": 1971
+                            }
+                        ],
+                        "contractToHire": [
+                            {
+                                "key": "false",
+                                "value": 3550
+                            },
+                            {
+                                "key": "true",
+                                "value": 1161
+                            }
+                        ],
+                        "paymentVerified": [
+                            {
+                                "key": "verified",
+                                "value": 4073
+                            }
+                        ],
+                        "proposals": [
+                            {
+                                "key": "5-9",
+                                "value": 601
+                            },
+                            {
+                                "key": "20-49",
+                                "value": 1758
+                            },
+                            {
+                                "key": "0-4",
+                                "value": 293
+                            },
+                            {
+                                "key": "10-14",
+                                "value": 652
+                            },
+                            {
+                                "key": "*",
+                                "value": 4711
+                            },
+                            {
+                                "key": "15-19",
+                                "value": 635
+                            }
+                        ],
+                        "previousClients": [
+                            {
+                                "key": "total",
+                                "value": 0
+                            }
+                        ]
+                    },
+                    "results": [
+                        {
+                            "id": "2044010272760545215",
+                            "title": "H^Python^H Platform Developer & AI Tech",
+                            "description": "We are expanding a multi-component platform built in H^Python^H, and I want to accelerate progress by partnering with an experienced senior developer.\nAfter reviewing the briefing, you should be able to decide whether you feel comfortable joining the project.\n\nHere you can find the details of the our project:\nhttps://ct-briefings-8a869a.gitlab.io/task1/\n...",
+                            "relevanceEncoded": "{\"position\":\"10\"}",
+                            "ontologySkills": [
+                                {
+                                    "uid": "996364628025274386",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Python",
+                                    "prettyName": "Python",
+                                    "freeText": null,
+                                    "highlighted": true
+                                },
+                                {
+                                    "uid": "1110580737240190976",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Web Application",
+                                    "prettyName": "Web Application",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1110580482566246400",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "API Integration",
+                                    "prettyName": "API Integration",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1691099314245873664",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "ChatGPT API Integration",
+                                    "prettyName": "ChatGPT API Integration",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1691099314254262272",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "AI Development",
+                                    "prettyName": "AI Development",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1031626794477273088",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Vue.js",
+                                    "prettyName": "Vue.js",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1031626741293498368",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Git",
+                                    "prettyName": "Git",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "1110580482322976768",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "API",
+                                    "prettyName": "API",
+                                    "freeText": null,
+                                    "highlighted": false
+                                },
+                                {
+                                    "uid": "996364628025274383",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "JavaScript",
+                                    "prettyName": "JavaScript",
+                                    "freeText": null,
+                                    "highlighted": false
+                                }
+                            ],
+                            "isSTSVectorSearchResult": null,
+                            "applied": false,
+                            "upworkHistoryData": {
+                                "client": {
+                                    "paymentVerificationStatus": "VERIFIED",
+                                    "country": "Germany",
+                                    "totalReviews": 0,
+                                    "totalFeedback": 0.0,
+                                    "hasFinancialPrivacy": false,
+                                    "totalSpent": {
+                                        "isoCurrencyCode": "USD",
+                                        "amount": "0.0"
+                                    }
+                                },
+                                "freelancerClientRelation": {
+                                    "lastContractRid": null,
+                                    "companyName": null,
+                                    "lastContractTitle": null
+                                }
+                            },
+                            "jobTile": {
+                                "job": {
+                                    "id": "2044010272760545215",
+                                    "ciphertext": "~022044010272760545215",
+                                    "jobType": "HOURLY",
+                                    "weeklyRetainerBudget": null,
+                                    "hourlyBudgetMax": "50.0",
+                                    "hourlyBudgetMin": "20.0",
+                                    "hourlyEngagementType": "AS_NEEDED",
+                                    "contractorTier": "ExpertLevel",
+                                    "sourcingTimestamp": null,
+                                    "createTime": "2026-04-14T11:10:00.064Z",
+                                    "publishTime": "2026-04-14T11:14:31.913Z",
+                                    "enterpriseJob": false,
+                                    "personsToHire": 1,
+                                    "premium": false,
+                                    "totalApplicants": 35,
+                                    "hourlyEngagementDuration": {
+                                        "rid": 3,
+                                        "label": "1 to 3 months",
+                                        "weeks": 9,
+                                        "mtime": "2014-06-04T17:59:10.123Z",
+                                        "ctime": "2014-06-04T17:59:10.123Z"
+                                    },
+                                    "fixedPriceAmount": null,
+                                    "fixedPriceEngagementDuration": null
+                                }
+                            }
+                        },
+                        {
+                            "id": "2043895407746123860",
+                            "title": "Real-Time Trading System Developer (H^Python^H, FastAPI, WebSockets, API Integration)",
+                            "description": "IMPORTANT:  \nThis is NOT a beginner project.",
+                            "relevanceEncoded": "{\"position\":\"11\"}",
+                            "ontologySkills": [
+                                {
+                                    "uid": "996364628025274386",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Python",
+                                    "prettyName": "Python",
+                                    "freeText": null,
+                                    "highlighted": true
+                                },
+                                {
+                                    "uid": "1031626730405085184",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Data Scraping",
+                                    "prettyName": "Data Scraping",
+                                    "freeText": null,
+                                    "highlighted": false
+                                }
+                            ],
+                            "isSTSVectorSearchResult": null,
+                            "applied": false,
+                            "upworkHistoryData": {
+                                "client": {
+                                    "paymentVerificationStatus": "VERIFIED",
+                                    "country": "USA",
+                                    "totalReviews": 0,
+                                    "totalFeedback": 0.0,
+                                    "hasFinancialPrivacy": false,
+                                    "totalSpent": {
+                                        "isoCurrencyCode": "USD",
+                                        "amount": "1900.0"
+                                    }
+                                },
+                                "freelancerClientRelation": {
+                                    "lastContractRid": null,
+                                    "companyName": null,
+                                    "lastContractTitle": null
+                                }
+                            },
+                            "jobTile": {
+                                "job": {
+                                    "id": "2043895407746123860",
+                                    "ciphertext": "~022043895407746123860",
+                                    "jobType": "HOURLY",
+                                    "weeklyRetainerBudget": null,
+                                    "hourlyBudgetMax": "40.0",
+                                    "hourlyBudgetMin": "19.0",
+                                    "hourlyEngagementType": "NOT_SURE",
+                                    "contractorTier": "IntermediateLevel",
+                                    "sourcingTimestamp": null,
+                                    "createTime": "2026-04-14T03:33:33.937Z",
+                                    "publishTime": "2026-04-14T03:38:35.444Z",
+                                    "enterpriseJob": false,
+                                    "personsToHire": 1,
+                                    "premium": false,
+                                    "totalApplicants": 52,
+                                    "hourlyEngagementDuration": {
+                                        "rid": 3,
+                                        "label": "1 to 3 months",
+                                        "weeks": 9,
+                                        "mtime": "2014-06-04T17:59:10.123Z",
+                                        "ctime": "2014-06-04T17:59:10.123Z"
+                                    },
+                                    "fixedPriceAmount": null,
+                                    "fixedPriceEngagementDuration": null
+                                }
+                            }
+                        },
+                        {
+                            "id": "2044324746101605096",
+                            "title": "H^Python^H Engineer: Multi-Stage Learning Loop & XML Automation for AI Video Tool",
+                            "description": "FIXED BUDGET JOB HERE",
+                            "relevanceEncoded": "{\"position\":\"15\"}",
+                            "ontologySkills": [
+                                {
+                                    "uid": "996364628025274386",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Python",
+                                    "prettyName": "Python",
+                                    "freeText": null,
+                                    "highlighted": true
+                                },
+                                {
+                                    "uid": "1031626755474440192",
+                                    "parentSkillUid": null,
+                                    "prefLabel": "Machine Learning",
+                                    "prettyName": "Machine Learning",
+                                    "freeText": null,
+                                    "highlighted": false
+                                }
+                            ],
+                            "isSTSVectorSearchResult": null,
+                            "applied": false,
+                            "upworkHistoryData": {
+                                "client": {
+                                    "paymentVerificationStatus": "VERIFIED",
+                                    "country": "UKR",
+                                    "totalReviews": 9,
+                                    "totalFeedback": 5.0,
+                                    "hasFinancialPrivacy": false,
+                                    "totalSpent": {
+                                        "isoCurrencyCode": "USD",
+                                        "amount": "2685.18"
+                                    }
+                                },
+                                "freelancerClientRelation": {
+                                    "lastContractRid": null,
+                                    "companyName": null,
+                                    "lastContractTitle": null
+                                }
+                            },
+                            "jobTile": {
+                                "job": {
+                                    "id": "2044324746101605096",
+                                    "ciphertext": "~022044324746101605096",
+                                    "jobType": "FIXED",
+                                    "weeklyRetainerBudget": null,
+                                    "hourlyBudgetMax": null,
+                                    "hourlyBudgetMin": null,
+                                    "hourlyEngagementType": null,
+                                    "contractorTier": "IntermediateLevel",
+                                    "sourcingTimestamp": null,
+                                    "createTime": "2026-04-15T07:59:36.233Z",
+                                    "publishTime": "2026-04-15T08:01:15.481Z",
+                                    "enterpriseJob": false,
+                                    "personsToHire": 1,
+                                    "premium": false,
+                                    "totalApplicants": 9,
+                                    "hourlyEngagementDuration": null,
+                                    "fixedPriceAmount": {
+                                        "isoCurrencyCode": "USD",
+                                        "amount": "200.0"
+                                    },
+                                    "fixedPriceEngagementDuration": {
+                                        "id": "474250516458926082",
+                                        "rid": 3,
+                                        "label": "1 to 3 months",
+                                        "weeks": 9,
+                                        "ctime": "2014-06-04T17:59:10.123Z",
+                                        "mtime": "2014-06-04T17:59:10.123Z"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
