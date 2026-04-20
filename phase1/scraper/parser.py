@@ -2,8 +2,8 @@ def parse_jobs(response_json):
     jobs = []
 
     try:
-        # Navigate through the userJobSearch response structure
-        results = response_json.get("data", {}).get("search", {}).get("universalSearchNuxt", {}).get("userJobSearchV1", {}).get("results", [])
+        # Navigate through the visitorJobSearch response structure
+        results = response_json.get("data", {}).get("search", {}).get("universalSearchNuxt", {}).get("visitorJobSearchV1", {}).get("results", [])
 
         for result in results:
             job_info = result.get("jobTile", {}).get("job", {})
@@ -33,6 +33,7 @@ def parse_jobs(response_json):
                 "job_type": job_info.get("jobType", "N/A"),
                 "budget": budget,
                 "skills": skills,
+                "link": f"https://www.upwork.com/jobs/{job_info.get('ciphertext', '')}"
             })
 
     except Exception as e:

@@ -4,11 +4,11 @@ from scraper.parser import parse_jobs
 import json
 
 payload = {
-  "query": """
-  query UserJobSearch($requestVariables: UserJobSearchV1Request!) {
+    "query": """
+  query VisitorJobSearch($requestVariables: VisitorJobSearchV1Request!) {
     search {
       universalSearchNuxt {
-        userJobSearchV1(request: $requestVariables) {
+        visitorJobSearchV1(request: $requestVariables) {
           paging {
             total
             offset
@@ -59,25 +59,6 @@ payload = {
     }
   
       
-    paymentVerified: payment 
-    {
-      key
-      value
-    }
-  
-    proposals 
-    {
-      key
-      value
-    }
-  
-    previousClients 
-    {
-      key
-      value
-    }
-  
-  
     }
   
           results {
@@ -94,26 +75,6 @@ payload = {
               highlighted
             }
             
-    isSTSVectorSearchResult
-    applied
-    upworkHistoryData {
-      client {
-        paymentVerificationStatus
-        country
-        totalReviews
-        totalFeedback
-        hasFinancialPrivacy
-        totalSpent {
-          isoCurrencyCode
-          amount
-        }
-      }
-      freelancerClientRelation {
-        lastContractRid
-        companyName
-        lastContractTitle
-      }
-    }
             jobTile {
               job {
                 id
@@ -128,11 +89,6 @@ payload = {
                 createTime
                 publishTime
                 
-    enterpriseJob
-    personsToHire
-    premium
-    totalApplicants
-  
                 hourlyEngagementDuration {
                   rid
                   label
@@ -160,22 +116,26 @@ payload = {
     }
   }
   """,
-  "variables": {
-    "requestVariables": {
-      "userQuery": "python",
-      "sort": "relevance+desc",
-      "highlight": True,
-      "paging": {
-        "offset": 10,
-        "count": 10
-      }
+    "variables": {
+        "requestVariables": {
+            "userQuery": "python",
+            "sort": "relevance+desc",
+            "highlight": True,
+            "paging": {
+                "offset": 0,
+                "count": 20
+            }
+        }
     }
-  }
 }
 
-def main():
+def run_scraper(keyword="python", count=10):
+    # Dynamically update the payload
+    payload["variables"]["requestVariables"]["userQuery"] = keyword
+    payload["variables"]["requestVariables"]["paging"]["count"] = count
+
     client = UpworkClient(HEADERS, COOKIES)
-    print("Fetching jobs from Upwork...")
+    print(f"Fetching {count} jobs from Upwork for keyword: {keyword}...")
     response = client.fetch_jobs(payload)
     
     print("Status Code:", response.status_code)
@@ -185,14 +145,16 @@ def main():
         jobs = parse_jobs(data)
         
         print(f"\nFound {len(jobs)} jobs.\n")
-        for idx, job in enumerate(jobs, 1):
-            print(f"[{idx}] {job['title']}")
-            print(f"    Budget: {job['budget']}")
-            print(f"    Skills: {', '.join(job['skills'])[:100]}...")
-            print("-" * 50)
+        return jobs
     else:
         print("Error fetching jobs. Response text:")
         print(response.text)
+        return []
 
 if __name__ == "__main__":
-    main()
+    jobs = run_scraper()
+    for idx, job in enumerate(jobs, 1):
+        print(f"[{idx}] {job['title']}")
+        print(f"    Budget: {job['budget']}")
+        print(f"    Skills: {', '.join(job['skills'])[:100]}...")
+        print("-" * 50)
