@@ -3,14 +3,15 @@ def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python") ->
     Filters out jobs that:
     1. Do not contain the target keyword (case insensitive) in title/description/skills.
     2. Fall strictly below the target minimum budget (when a parseable budget is found).
-    Remote work implies default on Upwork, but ignored for this specific iteration.
     """
     filtered = []
     
     for job in jobs:
-        # Case insensitive text match
-        full_text = f"{job['title']} {job['description']} {job.get('skills', '')}".lower()
-        if keyword.lower() not in full_text:
+        # Strip Upwork's H^word^H highlight markers before matching
+        raw_text = f"{job['title']} {job['description']} {job.get('skills', '')}"
+        clean_text = raw_text.replace("H^", "").replace("^H", "").lower()
+        
+        if keyword.lower() not in clean_text:
             continue
             
         # Optional Budget Filter (simplified float parse for mock)

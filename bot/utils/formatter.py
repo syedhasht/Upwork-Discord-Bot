@@ -4,24 +4,26 @@ def format_job(job: dict) -> discord.Embed:
     """
     Converts a job dictionary into a strictly formatted Discord Embed.
     """
-    title = f"**{job['title']}**"
-    
+    title = job['title']  # Embed titles are bold by default in Discord
+
     # Truncate description strictly to 300 chars
     desc = job['description']
     if len(desc) > 300:
         desc = desc[:297] + "..."
-        
-    budget = f"`{job.get('budget', 'N/A')}`"
+
+    budget = job.get('budget', 'N/A')
     link = job.get('link', 'https://www.upwork.com')
-    
+    skills = job.get('skills', [])
+    skills_text = ", ".join([s for s in skills if s][:6]) or "N/A"
+
     embed = discord.Embed(
         title=title,
         url=link,
         description=desc,
-        color=0x14a800
+        color=0x14a800  # Upwork green
     )
-    
-    embed.add_field(name="💰 Budget", value=budget, inline=False)
-    
-    embed.set_footer(text="Upwork Phase 4 Pipeline")
+
+    embed.add_field(name="💰 Budget", value=f"`{budget}`", inline=True)
+    embed.add_field(name="🛠 Skills", value=skills_text, inline=True)
+    embed.set_footer(text="Upwork Job Feed • Job Hunt Bot")
     return embed

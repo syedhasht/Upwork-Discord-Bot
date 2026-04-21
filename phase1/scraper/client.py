@@ -47,9 +47,9 @@ class UpworkClient:
             json=payload
         )
 
-        # Auto-refresh on Cloudflare block
-        if response.status_code == 403 and retry_on_403:
-            print(f"\n[UpworkClient] 403 Forbidden detected. Initiating auto-refresh...")
+        # Auto-refresh on Cloudflare block or Token Expiration
+        if response.status_code in [401, 403] and retry_on_403:
+            print(f"\n[UpworkClient] {response.status_code} Error detected. Initiating auto-refresh...")
             new_headers, new_cookies = _trigger_refresh()
             self.headers = new_headers
             self.cookies = new_cookies

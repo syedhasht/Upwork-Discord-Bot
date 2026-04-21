@@ -1,12 +1,24 @@
-import storage
+import sys
+from pathlib import Path
 
-def is_new_job(job_id: str) -> bool:
+# Ensure bot/ root is importable
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import database
+
+
+def is_new_job(job: dict) -> bool:
     """
-    Checks if a job has already been posted during the current runtime.
-    If it's new, it registers it permanently to prevent future duplication.
+    Checks if the job is new using the persistent SQLite database.
+    If it is new, saves it immediately so it won't be re-posted on next loop.
+    Returns True if new, False if duplicate.
     """
-    if job_id in storage.seen_jobs:
+    job_id = job.get("id")
+    if not job_id:
         return False
-        
-    storage.seen_jobs.add(job_id)
-    return True
+
+    if database.is_new_job(job_id):
+        database.save_job(job)
+        return True
+
+    return False
+

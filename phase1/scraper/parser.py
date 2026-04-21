@@ -1,3 +1,9 @@
+def _clean(text: str) -> str:
+    """Strip Upwork's H^word^H search highlight markers."""
+    if not text:
+        return text or ""
+    return text.replace("H^", "").replace("^H", "").strip()
+
 def parse_jobs(response_json):
     jobs = []
 
@@ -28,8 +34,8 @@ def parse_jobs(response_json):
 
             jobs.append({
                 "id": result.get("id"),
-                "title": result.get("title"),
-                "description": result.get("description"),
+                "title": _clean(result.get("title", "")),
+                "description": _clean(result.get("description", "")),
                 "job_type": job_info.get("jobType", "N/A"),
                 "budget": budget,
                 "skills": skills,

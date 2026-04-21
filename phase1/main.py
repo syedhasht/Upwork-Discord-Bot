@@ -119,7 +119,7 @@ payload = {
     "variables": {
         "requestVariables": {
             "userQuery": "python",
-            "sort": "relevance+desc",
+            "sort": "recency",
             "highlight": True,
             "paging": {
                 "offset": 0,
