@@ -1,18 +1,19 @@
 # 🤖 Upwork Job Hunt Discord Bot
 
-A fully automated, self-healing Upwork job scraper that delivers real-time job alerts directly into your Discord server — organized by keyword, filtered for quality, and deduplicated forever.
+An autonomous, self-healing Discord bot that scrapes Upwork in real-time and delivers fresh job listings directly into dedicated Discord channels — organized by keyword, filtered, and deduplicated permanently.
 
 ---
 
 ## ✨ Features
 
-- **Live Upwork Job Feed** — Scrapes real jobs sorted by newest first
-- **Dynamic Channel Tracking** — `!track python` creates a dedicated `#python-jobs` channel that auto-updates every minute
-- **Multi-Keyword Support** — Track Python, React, Java, or any keyword simultaneously in separate channels
-- **Self-Healing Auth** — When Cloudflare blocks the scraper, a headless browser automatically harvests fresh tokens and resumes — no human needed
-- **Duplicate Prevention** — SQLite database permanently records every posted job ID so nothing is ever posted twice, even after restarts
-- **Cloudflare Bypass** — Uses `curl_cffi` to impersonate Chrome at the TLS fingerprint level
-- **Clean Embeds** — Upwork-branded green embed cards with clickable job titles, budget, and skills
+- **Keyword-Based Channel Tracking** — `!track python` creates a `#python-jobs` channel that auto-updates every minute
+- **Multi-Keyword Support** — Track unlimited keywords simultaneously, each in its own isolated channel
+- **Newest Jobs First** — Sorted by `recency` so you always see the latest listings
+- **Self-Healing Auth** — When Cloudflare blocks the scraper, a headless browser auto-harvests fresh tokens and resumes with zero human input
+- **Permanent Deduplication** — SQLite tracks every posted job ID forever, so nothing gets posted twice even after restarts
+- **Cloudflare Bypass** — `curl_cffi` impersonates Chrome 110 at the TLS fingerprint level to avoid bot detection
+- **Posted Time** — Every job card shows how long ago it was posted (e.g. "3h ago")
+- **Restart Recovery** — All tracked keywords and channel bindings survive bot restarts via SQLite
 
 ---
 
@@ -21,33 +22,33 @@ A fully automated, self-healing Upwork job scraper that delivers real-time job a
 ```
 Discord Bot/
 │
-├── bot/                         # Discord bot application
-│   ├── bot.py                   # Main bot: commands, polling loop, startup
-│   ├── config.py                # Settings: token, channel ID, refresh interval
-│   ├── database.py              # SQLite helpers: jobs + keyword trackers
-│   ├── pipeline.py              # Bridge: connects bot to Phase 1 scraper
-│   ├── requirements.txt         # Python dependencies
-│   ├── .env                     # Secret keys (never commit this)
+├── discord/                         # Discord bot application
+│   ├── main.py                      # Entry point: commands, polling loop, startup logic
+│   ├── bridge.py                    # Connector between bot and scraper
+│   ├── database.py                  # SQLite helpers: jobs + tracked keywords
+│   ├── config.py                    # Loads BOT_TOKEN, CHANNEL_ID, REFRESH_INTERVAL
+│   ├── .env                         # Secret keys (never commit this)
+│   ├── requirements.txt             # Python dependencies
 │   │
-│   └── utils/
-│       ├── filters.py           # Keyword & budget filtering logic
-│       ├── dedupe.py            # Duplicate detection via DB lookup
-│       └── formatter.py         # Discord embed builder
+│   └── helpers/
+│       ├── filters.py               # Secondary keyword & budget filter
+│       ├── dedupe.py                # Duplicate detection via database lookup
+│       └── formatter.py            # Builds Discord embed cards from job data
 │
-├── phase1/                      # Upwork scraping engine
-│   ├── main.py                  # GraphQL payload + run_scraper() entry point
+├── scraper/                         # Upwork scraping engine
+│   ├── runner.py                    # GraphQL payload + run_scraper() entry point
 │   │
-│   └── scraper/
-│       ├── client.py            # curl_cffi HTTP client + 401/403 auto-heal trigger
-│       ├── parser.py            # Extracts title, budget, skills, ciphertext URL
-│       └── config.py            # Live Upwork cookies + auth token (auto-overwritten)
+│   └── core/
+│       ├── client.py                # curl_cffi HTTP client + 401/403 auto-heal trigger
+│       ├── parser.py                # Extracts title, budget, skills, posted time, URL
+│       └── config.py               # Live Upwork cookies + auth token (auto-overwritten)
 │
-├── phase2/                      # Cloudflare bypass engine
-│   └── auth/
-│       └── bootstrap.py         # Playwright headless browser: solves Cloudflare, harvests fresh tokens
+├── cloudflare/                      # Cloudflare bypass engine
+│   └── bypass/
+│       └── solver.py               # Playwright headless browser: solves CF, harvests tokens
 │
 ├── Database/
-│   └── jobs.db                  # SQLite database (posted_jobs + tracked_keywords tables)
+│   └── jobs.db                      # SQLite database (posted_jobs + tracked_keywords)
 │
 └── README.md
 ```
@@ -56,28 +57,32 @@ Discord Bot/
 
 ## ⚙️ Setup
 
-### 1. Install Dependencies
+### 1. Install Python Dependencies
 ```bash
-cd bot
-pip install -r requirements.txt
+pip install -r discord/requirements.txt
+```
+
+### 2. Install Playwright Browser
+```bash
 playwright install chromium
 ```
 
-### 2. Configure Environment
-Create `bot/.env`:
+### 3. Configure Environment
+Create `discord/.env`:
 ```env
 BOT_TOKEN=your_discord_bot_token_here
 CHANNEL_ID=your_default_channel_id_here
 ```
 
-### 3. Enable Discord Bot Intents
+### 4. Enable Discord Bot Permissions
 In the [Discord Developer Portal](https://discord.com/developers/applications/):
 - Go to your app → **Bot** → Enable **Message Content Intent**
+- Go to **OAuth2** → **Bot** → Enable **Manage Channels** permission
 
-### 4. Run the Bot
+### 5. Run the Bot
 ```bash
-cd bot
-python bot.py
+cd discord
+python main.py
 ```
 
 ---
@@ -86,60 +91,69 @@ python bot.py
 
 | Command | Description |
 |---|---|
-| `!track <keyword>` | Creates a dedicated channel and starts auto-fetching jobs every 1 minute |
-| `!untrack <keyword>` | Stops tracking a keyword and deletes its channel |
-| `!tracking` | Lists all active keyword trackers and their channels |
+| `!track <keyword>` | Creates a `#keyword-jobs` channel and begins auto-fetching every minute |
+| `!untrack <keyword>` | Stops tracking and deletes the keyword's channel |
+| `!tracking` | Lists all active keyword trackers and their bound channels |
 | `!search <keyword>` | One-off search posted directly to the current channel |
-| `!status` | Shows bot health, loop status, and active trackers |
+| `!status` | Shows loop status, poll interval, and all active trackers |
 | `!ping` | Basic alive check |
 
 ---
 
-## 🔄 How It Works
+## 🔄 Full Workflow
 
-### Normal Flow
+### Normal Polling (Every 1 Minute)
 ```
-!track python
-      ↓
-Creates #python-jobs channel
-      ↓
-Every 1 minute:
-  Scrape Upwork (visitorJobSearch GraphQL API, sorted by recency)
-      ↓
-  Strip Upwork highlight markers (H^word^H)
-      ↓
-  Filter by keyword + budget
-      ↓
-  Check SQLite for duplicate job IDs
-      ↓
-  Format as Discord embed with clickable Upwork link
-      ↓
-  Post to #python-jobs
-      ↓
-  Save job ID to database permanently
+Loop wakes up
+    ↓
+Read tracked_keywords from SQLite
+    ↓
+For each keyword (e.g. python, django):
+    ↓
+    bridge.py calls scraper/runner.py
+    ↓
+    runner.py reloads scraper/core/config.py fresh (picks up latest tokens)
+    ↓
+    runner.py injects keyword into GraphQL query
+    ↓
+    client.py fires POST to Upwork's visitorJobSearch GraphQL API
+    ↓
+    Upwork returns up to 10 newest matching jobs as JSON
+    ↓
+    parser.py extracts: title, budget, skills, posted_on, ciphertext URL
+    ↓
+    helpers/filters.py drops jobs missing the keyword
+    ↓
+    helpers/dedupe.py drops jobs already in posted_jobs table
+    ↓
+    helpers/formatter.py builds Discord embed card
+    ↓
+    Bot posts embed to #keyword-jobs channel
+    ↓
+    Job ID saved permanently to SQLite
 ```
 
 ### Token Expiry & Auto-Heal
-When Upwork returns `401` or `403`:
-1. `client.py` intercepts the error
-2. Spawns `phase2/auth/bootstrap.py` automatically
-3. Headless Chrome opens Upwork, solves Cloudflare puzzles
-4. Fresh `cf_clearance` cookie + `Authorization` token are extracted
-5. `phase1/scraper/config.py` is overwritten with new credentials
-6. Original request is retried once — jobs flow normally
+```
+client.py fires request
+    ↓
+Upwork returns 401 or 403
+    ↓
+client.py spawns cloudflare/bypass/solver.py as subprocess
+    ↓
+Playwright opens real Chromium, loads Upwork
+    ↓
+Cloudflare JavaScript challenges run against real browser fingerprint
+    ↓
+solver.py captures fresh cf_clearance cookie + Authorization token
+    ↓
+scraper/core/config.py is overwritten with new credentials
+    ↓
+Original request is retried once with fresh tokens → succeeds
+```
 
 ### Bot Restart Recovery
-All tracked keywords and channel IDs are stored in SQLite. On restart, the bot reads the `tracked_keywords` table and **resumes all polling loops automatically** without any commands needed.
-
----
-
-## 🛠️ Configuration
-
-| File | Setting | Default |
-|---|---|---|
-| `bot/config.py` | `REFRESH_INTERVAL` | `1` (minute) |
-| `phase1/main.py` | `"sort"` | `"recency"` (newest first) |
-| `phase1/main.py` | `count` | `10` jobs per fetch |
+On startup, `database.get_all_trackers()` reads the `tracked_keywords` table and the polling loop immediately resumes all keywords. No `!track` commands need to be re-run.
 
 ---
 
@@ -148,39 +162,52 @@ All tracked keywords and channel IDs are stored in SQLite. On restart, the bot r
 Located at `Database/jobs.db`. Two tables:
 
 **`posted_jobs`** — Every job ever sent to Discord
+
 | Column | Description |
 |---|---|
-| `job_id` | Upwork's internal job ID (primary key) |
+| `job_id` | Upwork job ID (primary key, used for deduplication) |
 | `title` | Job title |
 | `budget` | Formatted budget string |
 | `link` | Full `https://www.upwork.com/jobs/~...` URL |
-| `posted_at` | ISO timestamp when posted |
+| `posted_at` | ISO timestamp of when the bot posted it |
 
 **`tracked_keywords`** — Active channel trackers
+
 | Column | Description |
 |---|---|
-| `keyword` | The search keyword (e.g. `python`) |
+| `keyword` | Search keyword (e.g. `python`) |
 | `channel_id` | Discord channel ID |
 | `guild_id` | Discord server ID |
 | `created_at` | When tracking started |
 
 ---
 
-## 🔐 Security Notes
+## ⚙️ Configuration
 
-- **Never commit `bot/.env`** — your Discord bot token is in there
-- `phase1/scraper/config.py` contains temporary Upwork session cookies — it is auto-regenerated and also should not be committed
-- Both files are listed in `.gitignore`
+| File | Setting | Default | Description |
+|---|---|---|---|
+| `discord/config.py` | `REFRESH_INTERVAL` | `1` | Poll frequency in minutes |
+| `discord/bridge.py` | `count` | `10` | Jobs fetched per keyword per cycle |
+| `scraper/runner.py` | `"sort"` | `"recency"` | Job sort order (newest first) |
 
 ---
 
 ## 📦 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Discord Bot | `discord.py` with `discord.ext.tasks` |
-| HTTP Client | `curl_cffi` (Chrome TLS impersonation) |
-| Cloudflare Bypass | `Playwright` (headless Chromium) |
-| API | Upwork internal `visitorJobSearch` GraphQL |
-| Database | SQLite (built into Python — no server needed) |
-| Config | `python-dotenv` |
+| Layer | Technology | Purpose |
+|---|---|---|
+| Discord Bot | `discord.py` + `discord.ext.tasks` | Commands, embeds, background loop |
+| HTTP Client | `curl_cffi` | Chrome TLS impersonation to bypass Cloudflare |
+| Browser Automation | `Playwright` (Chromium) | Harvests fresh tokens when blocked |
+| API | Upwork `visitorJobSearch` GraphQL | Internal job search endpoint |
+| Database | `SQLite3` (built into Python) | Permanent deduplication + tracker storage |
+| Config | `python-dotenv` | Loads secrets from `.env` |
+
+---
+
+## 🔐 Security Notes
+
+- **Never commit `discord/.env`** — contains your live Discord bot token
+- **Never commit `scraper/core/config.py`** — contains live Upwork session cookies
+- Both are listed in `.gitignore`
+- `cloudflare/bypass/cookies.json` is created automatically after the first token refresh — it is a backup log and is also gitignored
