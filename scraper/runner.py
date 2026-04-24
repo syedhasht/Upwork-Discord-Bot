@@ -1,6 +1,13 @@
 from core.client import UpworkClient
-from core.config import HEADERS, COOKIES
+try:
+    from core.config import HEADERS, COOKIES
+except ImportError:
+    HEADERS = {}
+    COOKIES = {}
 from core.parser import parse_jobs
+import logging
+
+logger = logging.getLogger("jobhunt")
 
 payload = {
     "query": """
@@ -128,33 +135,29 @@ payload = {
     }
 }
 
-def run_scraper(keyword="python", count=10):
-    # Always reload config from disk to pick up the latest tokens
-    # written by the Cloudflare solver on any previous keyword's refresh
-    import importlib
-    import core.config as _cfg
-    importlib.reload(_cfg)
-    headers = _cfg.HEADERS
-    cookies = _cfg.COOKIES
-
+def run_scraper(keyword="python", count=10, force_refresh=False):
     # Dynamically update the payload
     payload["variables"]["requestVariables"]["userQuery"] = keyword
     payload["variables"]["requestVariables"]["paging"]["count"] = count
 
-    client = UpworkClient(headers, cookies)
-    print(f"Fetching {count} jobs from Upwork for keyword: {keyword}...")
-    response = client.fetch_jobs(payload)
+    # UpworkClient now handles loading from session.json automatically
+    client = UpworkClient()
+    logger.debug(f"Fetching {count} jobs for keyword: '{keyword}'")
+    response = client.fetch_jobs(payload, force_refresh=force_refresh)
 
-    print("Status Code:", response.status_code)
+    if response is None:
+        logger.error(f"Failed to fetch jobs for '{keyword}'. Network error or timeout.")
+        return []
+
+    logger.debug(f"Upwork response status: {response.status_code}")
 
     if response.status_code == 200:
         data = response.json()
         jobs = parse_jobs(data)
-        print(f"\nFound {len(jobs)} jobs.\n")
+        logger.debug(f"Received {len(jobs)} jobs for '{keyword}'")
         return jobs
     else:
-        print("Error fetching jobs. Response text:")
-        print(response.text)
+        logger.error(f"Failed to fetch jobs for '{keyword}'. Status: {response.status_code}")
         return []
 
 if __name__ == "__main__":

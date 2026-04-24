@@ -1,17 +1,19 @@
 # ============================================================
 # Upwork Job Hunt Discord Bot - Requirements
 # Install all dependencies: pip install -r requirements.txt
-# Then install Playwright browser: playwright install chromium
 # ============================================================
 
 # Discord bot framework
 discord.py>=2.3.0
 
-# Load .env secrets (BOT_TOKEN, CHANNEL_ID)
+# Load .env secrets (BOT_TOKEN)
 python-dotenv>=1.0.0
 
 # HTTP client that impersonates Chrome TLS fingerprint (Cloudflare bypass)
 curl_cffi>=0.6.0
 
-# Headless browser automation for Cloudflare token harvesting
-playwright>=1.40.0
+# Undetected browser automation for Cloudflare token harvesting
+seleniumbase>=4.48.0
+
+# Process management for window hiding/cleanup
+psutil>=5.9.0

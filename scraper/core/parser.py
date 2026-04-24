@@ -35,19 +35,49 @@ def _format_publish_time(raw_time) -> str:
 def parse_jobs(response_json):
     jobs = []
 
+    if not response_json or not isinstance(response_json, dict):
+        return jobs
+
     try:
-        # Navigate through the visitorJobSearch response structure
-        results = response_json.get("data", {}).get("search", {}).get("universalSearchNuxt", {}).get("visitorJobSearchV1", {}).get("results", [])
+        # Navigate through the visitorJobSearch response structure safely
+        data = response_json.get("data")
+        if not data:
+            return jobs
+            
+        search = data.get("search")
+        if not search:
+            return jobs
+
+        nuxt = search.get("universalSearchNuxt")
+        if not nuxt:
+            return jobs
+
+        vjs = nuxt.get("visitorJobSearchV1")
+        if not vjs:
+            return jobs
+
+        results = vjs.get("results")
+        if not results or not isinstance(results, list):
+            return jobs
 
         for result in results:
-            job_info = result.get("jobTile", {}).get("job", {})
+            if not result or not isinstance(result, dict):
+                continue
+
+            job_tile = result.get("jobTile")
+            if not job_tile:
+                continue
+                
+            job_info = job_tile.get("job", {})
             
             # Formulate the budget properly
             budget = "N/A"
             if job_info.get("jobType") == "FIXED":
-                budget_amount = job_info.get("fixedPriceAmount", {}).get("amount", "N/A")
-                currency = job_info.get("fixedPriceAmount", {}).get("isoCurrencyCode", "USD")
-                budget = f"{budget_amount} {currency}"
+                amount = job_info.get("fixedPriceAmount", {}).get("amount")
+                if amount is not None:
+                    # Some budgets come as "1500.0". We strip .0 for cleaner look.
+                    fmt_amount = str(amount).replace(".0", "")
+                    budget = f"${fmt_amount}"
             elif job_info.get("jobType") == "HOURLY":
                 min_rate = job_info.get("hourlyBudgetMin")
                 max_rate = job_info.get("hourlyBudgetMax")
@@ -60,6 +90,7 @@ def parse_jobs(response_json):
 
             skills = [skill.get("prefLabel") for skill in result.get("ontologySkills", [])]
 
+            import json
             jobs.append({
                 "id": result.get("id"),
                 "title": _clean(result.get("title", "")),
@@ -67,8 +98,10 @@ def parse_jobs(response_json):
                 "job_type": job_info.get("jobType", "N/A"),
                 "budget": budget,
                 "skills": skills,
-                "posted_on": _format_publish_time(job_info.get("publishTime")),
-                "link": f"https://www.upwork.com/jobs/{job_info.get('ciphertext', '')}"
+                "created_at_raw": job_info.get("createTime") or job_info.get("publishTime"),
+                "posted_on": _format_publish_time(job_info.get("createTime") or job_info.get("publishTime")),
+                "link": f"https://www.upwork.com/jobs/{job_info.get('ciphertext', '')}",
+                "raw_json": json.dumps(result) # Store the full result object for this job
             })
 
     except Exception as e:

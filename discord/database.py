@@ -1,6 +1,9 @@
 import sqlite3
 from pathlib import Path
 import datetime
+import logging
+
+logger = logging.getLogger("jobhunt")
 
 # Database lives centrally in the root Database folder
 DB_PATH = Path(__file__).resolve().parent.parent / "Database" / "jobs.db"
@@ -18,12 +21,16 @@ def init_db():
     with _get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS posted_jobs (
-                job_id    TEXT PRIMARY KEY,
-                title     TEXT,
-                budget    TEXT,
-                link      TEXT,
-                keyword   TEXT,
-                posted_at TEXT
+                job_id      TEXT PRIMARY KEY,
+                title       TEXT,
+                budget      TEXT,
+                description TEXT,
+                raw_json    TEXT,
+                is_updated  INTEGER DEFAULT 0,
+                updated_at  TEXT,
+                link        TEXT,
+                keyword     TEXT,
+                posted_at   TEXT
             )
         """)
         conn.execute("""
@@ -34,40 +41,110 @@ def init_db():
                 created_at TEXT
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS token_refresh_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT,
+                time TEXT
+            )
+        """)
         conn.commit()
-    print(f"[DB] Database initialized at {DB_PATH}")
+
+    # Migration: Add columns if they don't exist
+    for col in ["description", "raw_json", "is_updated", "updated_at", "keyword"]:
+        try:
+            with _get_connection() as conn:
+                # SQLite doesn't support adding DEFAULT value to existing columns easily via ALTER, 
+                # but we can just add the column.
+                conn.execute(f"ALTER TABLE posted_jobs ADD COLUMN {col} TEXT")
+                conn.commit()
+        except sqlite3.OperationalError:
+            pass # Column already exists
+
+    logger.info(f"Database initialized at {DB_PATH}")
+
+
+def get_job(job_id: str) -> dict:
+    """
+    Fetches a single job record from the database by its ID.
+    """
+    with _get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM posted_jobs WHERE job_id = ?", (job_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_job_by_content(description: str, budget: str) -> dict:
+    """
+    Finds a job by its description and budget.
+    Used for the 'Swap Rule' to detect reposts.
+    """
+    with _get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM posted_jobs WHERE description = ? AND budget = ?", 
+            (description, budget)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_job(job_id: str):
+    """Permanently deletes a job record."""
+    with _get_connection() as conn:
+        conn.execute("DELETE FROM posted_jobs WHERE job_id = ?", (job_id,))
+        conn.commit()
 
 
 def is_new_job(job_id: str) -> bool:
     """
     Returns True if the job has NOT been seen before.
-    Returns False (duplicate) if it already exists in the database.
     """
-    with _get_connection() as conn:
-        row = conn.execute(
-            "SELECT 1 FROM posted_jobs WHERE job_id = ?", (job_id,)
-        ).fetchone()
-    return row is None
+    return get_job(job_id) is None
 
 
-def save_job(job: dict):
+def save_job(job: dict, is_update: bool = False):
     """
-    Permanently saves a job record to the database.
+    Permanently saves or updates a job record in the database.
     """
     with _get_connection() as conn:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO posted_jobs (job_id, title, budget, link, posted_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                job.get("id"),
-                job.get("title"),
-                job.get("budget"),
-                job.get("link"),
-                datetime.datetime.now().isoformat()
+        now = datetime.datetime.now().isoformat()
+        
+        if is_update:
+            conn.execute(
+                """
+                UPDATE posted_jobs 
+                SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?, keyword = COALESCE(?, keyword)
+                WHERE job_id = ?
+                """,
+                (
+                    job.get("title"),
+                    job.get("budget"),
+                    job.get("description"),
+                    job.get("raw_json"),
+                    now,
+                    job.get("keyword"),
+                    job.get("id")
+                )
             )
-        )
+        else:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO posted_jobs (job_id, title, budget, description, raw_json, is_updated, posted_at, link, keyword)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+                """,
+                (
+                    job.get("id"),
+                    job.get("title"),
+                    job.get("budget"),
+                    job.get("description"),
+                    job.get("raw_json"),
+                    now,
+                    job.get("link"),
+                    job.get("keyword")
+                )
+            )
         conn.commit()
 
 
@@ -106,6 +183,9 @@ def remove_tracker(keyword: str):
         conn.execute(
             "DELETE FROM tracked_keywords WHERE keyword = ?", (keyword.lower(),)
         )
+        conn.execute(
+            "DELETE FROM posted_jobs WHERE keyword = ?", (keyword.lower(),)
+        )
         conn.commit()
 
 
@@ -125,3 +205,45 @@ def tracker_exists(keyword: str) -> bool:
             "SELECT 1 FROM tracked_keywords WHERE keyword = ?", (keyword.lower(),)
         ).fetchone()
     return row is not None
+
+
+# ── Metadata ──────────────────────────────────────────────────────────────────
+
+# (Metadata functions removed as they are no longer needed)
+
+
+def add_token_refresh(dt: datetime.datetime = None):
+    """Adds a new row to the token_refresh_history table."""
+    if dt is None:
+        dt = datetime.datetime.now().astimezone()
+    date_str = dt.strftime("%Y-%m-%d")
+    time_str = dt.strftime("%H:%M:%S")
+    with _get_connection() as conn:
+        conn.execute(
+            "INSERT INTO token_refresh_history (date, time) VALUES (?, ?)",
+            (date_str, time_str)
+        )
+        conn.commit()
+
+
+def get_latest_token_refresh() -> datetime.datetime:
+    """Returns the most recent token refresh as a datetime object, or None if empty."""
+    with _get_connection() as conn:
+        row = conn.execute(
+            "SELECT date, time FROM token_refresh_history ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    if row:
+        dt_str = f"{row[0]}T{row[1]}"
+        return datetime.datetime.fromisoformat(dt_str).astimezone()
+    return None
+
+
+def prune_old_jobs(hours: int = 50):
+    """Deletes jobs older than the specified number of hours."""
+    with _get_connection() as conn:
+        # Calculate the cutoff time (local time)
+        cutoff = (datetime.datetime.now() - datetime.timedelta(hours=hours)).isoformat()
+        cursor = conn.execute("DELETE FROM posted_jobs WHERE posted_at < ?", (cutoff,))
+        count = cursor.rowcount
+        conn.commit()
+    return count

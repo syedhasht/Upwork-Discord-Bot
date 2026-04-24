@@ -9,9 +9,9 @@ if str(SCRAPER_DIR) not in sys.path:
 import runner as scraper_runner
 
 
-def get_jobs(keyword: str = "python", count: int = 10) -> list:
+def get_jobs(keyword: str = "python", count: int = 10, force_refresh: bool = False) -> list:
     """
     Bridge between the Discord bot and the Upwork scraper.
     Calls scraper/runner.py and returns a clean list of job dicts.
     """
-    return scraper_runner.run_scraper(keyword=keyword, count=count)
+    return scraper_runner.run_scraper(keyword=keyword, count=count, force_refresh=force_refresh)

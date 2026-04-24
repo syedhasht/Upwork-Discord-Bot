@@ -1,10 +1,12 @@
 import discord
 
-def format_job(job: dict) -> discord.Embed:
+def format_job(job: dict, is_update: bool = False) -> discord.Embed:
     """
     Converts a job dictionary into a strictly formatted Discord Embed.
     """
-    title = job['title']  # Embed titles are bold by default in Discord
+    title = job['title']
+    if is_update:
+        title = f"🔄 UPDATED: {title}"
 
     # Truncate description strictly to 300 chars
     desc = job['description']
@@ -21,7 +23,7 @@ def format_job(job: dict) -> discord.Embed:
         title=title,
         url=link,
         description=desc,
-        color=0x14a800  # Upwork green
+        color=0xF1C40F if is_update else 0x14a800  # Gold for updates, Green for new
     )
 
     embed.add_field(name="💰 Budget", value=f"`{budget}`", inline=True)
