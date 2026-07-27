@@ -20,13 +20,17 @@ def is_new_job(job: dict) -> str:
     existing = database.get_job(job_id)
     
     if not existing:
-        # SWAP RULE: Check if a job with same Description/Budget exists but with a different ID
+        # Check if a job with same Description/Budget already exists in DB
         content_match = database.get_job_by_content(job.get("description"), job.get("budget"))
-        if content_match:
-            # Delete the old "dead" job record before saving the new "live" one
-            database.delete_job(content_match["job_id"])
         
+        # Always save the job so its ID is recorded in the DB
         database.save_job(job)
+        
+        if content_match:
+            # Content already exists in DB (duplicate posting or repost).
+            # Do not post a duplicate notification to Discord.
+            return None
+        
         return "new"
 
     # Check for updates in budget or description

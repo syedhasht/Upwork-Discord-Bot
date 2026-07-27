@@ -10,6 +10,7 @@ DB_PATH = Path(__file__).resolve().parent.parent / "Database" / "jobs.db"
 
 
 def _get_connection():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(DB_PATH)
 
 
