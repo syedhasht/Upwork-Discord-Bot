@@ -5,23 +5,30 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database
 
-def is_new_job(job: dict) -> str:
+def is_new_job(job: dict, keyword: str = None) -> str:
     """
     Checks if a job is new, updated, or a duplicate.
     Returns:
-        "new"     -> If ID is not in DB.
-        "updated" -> If ID is in DB but budget or description changed.
+        "new"     -> If ID + keyword is not in DB.
+        "updated" -> If ID + keyword is in DB but budget or description changed.
         None      -> If it's a perfect duplicate.
     """
     job_id = job.get("id")
     if not job_id:
         return None
 
-    existing = database.get_job(job_id)
+    if keyword is None:
+        keyword = job.get("keyword") or "unknown"
+
+    # Ensure job dict has the correct keyword for database operations
+    job["keyword"] = keyword
+
+    existing = database.get_job_by_keyword(job_id, keyword)
     
     if not existing:
         # Check if a job with same Description/Budget already exists in DB
-        content_match = database.get_job_by_content(job.get("description"), job.get("budget"))
+        content_match = database.get_job_by_content(job.get("description"), job.get("budget"), keyword)
+
         
         # Always save the job so its ID is recorded in the DB
         database.save_job(job)
@@ -46,3 +53,4 @@ def is_new_job(job: dict) -> str:
         return "updated"
 
     return None
+

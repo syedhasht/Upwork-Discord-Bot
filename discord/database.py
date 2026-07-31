@@ -17,12 +17,54 @@ def _get_connection():
 def init_db():
     """
     Creates all required tables if they don't already exist.
-    Called once at bot startup.
+    Called once at bot startup. Also handles migrations to composite primary key.
     """
+    # 1. Schema check & migration to composite primary key (job_id, keyword)
+    with _get_connection() as conn:
+        table_exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='posted_jobs'"
+        ).fetchone()
+        
+        if table_exists:
+            pk_cols = [row[1] for row in conn.execute("PRAGMA table_info(posted_jobs)").fetchall() if row[5] > 0]
+            if len(pk_cols) == 1 and pk_cols[0] == "job_id":
+                logger.info("Migrating posted_jobs table to composite primary key (job_id, keyword)...")
+                # Step 1: Rename old table
+                conn.execute("ALTER TABLE posted_jobs RENAME TO posted_jobs_old")
+                # Step 2: Create new table with composite PK
+                conn.execute("""
+                    CREATE TABLE posted_jobs (
+                        job_id      TEXT,
+                        title       TEXT,
+                        budget      TEXT,
+                        description TEXT,
+                        raw_json    TEXT,
+                        is_updated  INTEGER DEFAULT 0,
+                        updated_at  TEXT,
+                        link        TEXT,
+                        keyword     TEXT,
+                        posted_at   TEXT,
+                        PRIMARY KEY (job_id, keyword)
+                    )
+                """)
+                # Step 3: Copy data (coalesce NULL keyword to 'unknown')
+                conn.execute("""
+                    INSERT OR IGNORE INTO posted_jobs (
+                        job_id, title, budget, description, raw_json, is_updated, updated_at, link, keyword, posted_at
+                    )
+                    SELECT 
+                        job_id, title, budget, description, raw_json, is_updated, updated_at, link, COALESCE(keyword, 'unknown'), posted_at
+                    FROM posted_jobs_old
+                """)
+                # Step 4: Drop old table
+                conn.execute("DROP TABLE posted_jobs_old")
+                conn.commit()
+                logger.info("Migration to composite primary key complete.")
+
     with _get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS posted_jobs (
-                job_id      TEXT PRIMARY KEY,
+                job_id      TEXT,
                 title       TEXT,
                 budget      TEXT,
                 description TEXT,
@@ -31,7 +73,8 @@ def init_db():
                 updated_at  TEXT,
                 link        TEXT,
                 keyword     TEXT,
-                posted_at   TEXT
+                posted_at   TEXT,
+                PRIMARY KEY (job_id, keyword)
             )
         """)
         conn.execute("""
@@ -55,8 +98,6 @@ def init_db():
     for col in ["description", "raw_json", "is_updated", "updated_at", "keyword"]:
         try:
             with _get_connection() as conn:
-                # SQLite doesn't support adding DEFAULT value to existing columns easily via ALTER, 
-                # but we can just add the column.
                 conn.execute(f"ALTER TABLE posted_jobs ADD COLUMN {col} TEXT")
                 conn.commit()
         except sqlite3.OperationalError:
@@ -65,30 +106,57 @@ def init_db():
     logger.info(f"Database initialized at {DB_PATH}")
 
 
+
 def get_job(job_id: str) -> dict:
     """
-    Fetches a single job record from the database by its ID.
+    Fetches a single job record from the database by its ID (returns the first matched).
     """
     with _get_connection() as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
-            "SELECT * FROM posted_jobs WHERE job_id = ?", (job_id,)
+            "SELECT * FROM posted_jobs WHERE job_id = ? LIMIT 1", (job_id,)
         ).fetchone()
     return dict(row) if row else None
 
 
-def get_job_by_content(description: str, budget: str) -> dict:
+def get_job_by_keyword(job_id: str, keyword: str) -> dict:
     """
-    Finds a job by its description and budget.
-    Used for the 'Swap Rule' to detect reposts.
+    Fetches a single job record from the database by its ID and keyword.
     """
     with _get_connection() as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
-            "SELECT * FROM posted_jobs WHERE description = ? AND budget = ?", 
-            (description, budget)
+            "SELECT * FROM posted_jobs WHERE job_id = ? AND LOWER(keyword) = ?", 
+            (job_id, keyword.lower())
         ).fetchone()
     return dict(row) if row else None
+
+
+def count_jobs_by_keyword(keyword: str) -> int:
+    """
+    Returns the number of jobs stored in the database for the given keyword.
+    """
+    with _get_connection() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM posted_jobs WHERE LOWER(keyword) = ?", (keyword.lower(),)
+        ).fetchone()
+    return row[0] if row else 0
+
+
+
+def get_job_by_content(description: str, budget: str, keyword: str) -> dict:
+    """
+    Finds a job by its description, budget, and keyword.
+    Used for the 'Swap Rule' to detect reposts for this keyword.
+    """
+    with _get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM posted_jobs WHERE description = ? AND budget = ? AND LOWER(keyword) = ?", 
+            (description, budget, keyword.lower())
+        ).fetchone()
+    return dict(row) if row else None
+
 
 
 def delete_job(job_id: str):
@@ -111,13 +179,16 @@ def save_job(job: dict, is_update: bool = False):
     """
     with _get_connection() as conn:
         now = datetime.datetime.now().isoformat()
+        keyword = job.get("keyword")
+        if keyword:
+            keyword = keyword.lower()
         
         if is_update:
             conn.execute(
                 """
                 UPDATE posted_jobs 
-                SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?, keyword = COALESCE(?, keyword)
-                WHERE job_id = ?
+                SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?
+                WHERE job_id = ? AND LOWER(keyword) = ?
                 """,
                 (
                     job.get("title"),
@@ -125,8 +196,8 @@ def save_job(job: dict, is_update: bool = False):
                     job.get("description"),
                     job.get("raw_json"),
                     now,
-                    job.get("keyword"),
-                    job.get("id")
+                    job.get("id"),
+                    keyword
                 )
             )
         else:
@@ -143,10 +214,11 @@ def save_job(job: dict, is_update: bool = False):
                     job.get("raw_json"),
                     now,
                     job.get("link"),
-                    job.get("keyword")
+                    keyword
                 )
             )
         conn.commit()
+
 
 
 def get_all_jobs() -> list:

@@ -122,22 +122,42 @@ async def _fetch_and_post(keyword: str, channel: discord.TextChannel):
         filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword)
         filtered_jobs.sort(key=lambda x: x.get("created_at_raw") or "")
         
-        to_post = filtered_jobs[-10:]
+        # Check if this is the first scan (0 jobs in DB for this keyword)
+        is_initial = database.count_jobs_by_keyword(keyword) == 0
+        
         posted_new = 0
         posted_updated = 0
 
-        for job in to_post:
-            job["keyword"] = keyword
-            status = is_new_job(job)
-            if status:
-                embed = format_job(job, is_update=(status == "updated"))
+        if is_initial:
+            logger.info(f"[{keyword}] Initial scan detected. Saving all {len(filtered_jobs)} matching jobs, but only posting the 5 newest to prevent spam.")
+            # Save all jobs to DB so they are marked as seen, but only post the 5 newest
+            for job in filtered_jobs:
+                job["keyword"] = keyword
+                is_new_job(job, keyword)
+            
+            # Post only the 5 newest
+            to_post_initial = filtered_jobs[-5:]
+            for job in to_post_initial:
+                embed = format_job(job, is_update=False)
                 await channel.send(embed=embed)
-                if status == "new": posted_new += 1
-                else: posted_updated += 1
+                posted_new += 1
+        else:
+            # Process all matching jobs and post everything that is new or updated
+            for job in filtered_jobs:
+                job["keyword"] = keyword
+                status = is_new_job(job, keyword)
+                if status:
+                    embed = format_job(job, is_update=(status == "updated"))
+                    await channel.send(embed=embed)
+                    if status == "new":
+                        posted_new += 1
+                    else:
+                        posted_updated += 1
 
         logger.info(f"[{keyword}] Posted {posted_new} new, {posted_updated} updated job(s).")
     except Exception as e:
         logger.error(f"[{keyword}] Polling error: {e}")
+
 
 
 # ── Commands ──────────────────────────────────────────────────────────────────
@@ -202,11 +222,17 @@ async def search(ctx, *, keyword: str):
         raw_jobs = await loop.run_in_executor(None, bridge.get_jobs, keyword, 50)
         filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword)
         filtered_jobs.sort(key=lambda x: x.get("created_at_raw") or "")
+        
+        # Display the 10 newest jobs directly without calling is_new_job.
+        # This prevents filtering out already-scraped jobs or modifying DB.
         to_post = filtered_jobs[-10:]
         
+        if not to_post:
+            await ctx.send("No matching jobs found on Upwork.")
+            return
+            
         for job in to_post:
-            status = is_new_job(job)
-            if status:
-                await ctx.send(embed=format_job(job, is_update=(status == "updated")))
+            await ctx.send(embed=format_job(job, is_update=False))
     except Exception as e:
         await ctx.send(f"❌ Search failed: {e}")
+
