@@ -189,7 +189,7 @@ def save_job(job: dict, is_update: bool = False):
                 """
                 UPDATE posted_jobs 
                 SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?
-                WHERE job_id = ? AND LOWER(keyword) = ?
+                WHERE job_id = ?
                 """,
                 (
                     job.get("title"),
@@ -197,10 +197,10 @@ def save_job(job: dict, is_update: bool = False):
                     job.get("description"),
                     job.get("raw_json"),
                     now,
-                    job.get("id"),
-                    keyword
+                    job.get("id")
                 )
             )
+
         else:
             conn.execute(
                 """
