@@ -1,25 +1,50 @@
 import re
+import datetime
 
-def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python") -> list:
+def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python", max_age_hours: float = 1.0) -> list:
     """
     Filters out jobs that:
     1. Are hourly jobs (only fixed-price jobs allowed).
-    2. Do not match the target keyword (using flexible matching) in title/description/skills.
-    3. Fall strictly below the target minimum budget (when a parseable budget is found).
+    2. Are older than max_age_hours (default: max 1 hour old).
+    3. Do not match the target keyword (using flexible matching) in title/description/skills.
+    4. Fall strictly below the target minimum budget (when a parseable budget is found).
     """
     filtered = []
     kw_clean = keyword.lower().strip()
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     
     for job in jobs:
         # Exclude hourly jobs
         job_type = str(job.get("job_type", "")).upper()
         if job_type == "HOURLY" or "/ hr" in str(job.get("budget", "")).lower():
             continue
+
+        # Exclude jobs older than max_age_hours (default: max 1 hour old)
+        if max_age_hours is not None and max_age_hours > 0:
+            raw_time = job.get("created_at_raw")
+            if not raw_time:
+                continue
+            try:
+                if isinstance(raw_time, str):
+                    dt = datetime.datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+                else:
+                    dt = datetime.datetime.fromtimestamp(int(raw_time) / 1000, tz=datetime.timezone.utc)
+                age_seconds = (now_utc - dt).total_seconds()
+                # Allow a small 5-minute clock drift into the future (-300s), but reject if older than cutoff
+                if age_seconds > (max_age_hours * 3600) or age_seconds < -300:
+                    continue
+            except Exception:
+                continue
         # Strip Upwork's H^word^H highlight markers before matching
         skills_list = job.get('skills') or []
         skills_str = " ".join(skills_list)
         raw_text = f"{job['title']} {job['description']} {skills_str}"
         clean_text = raw_text.replace("H^", "").replace("^H", "").lower()
+        
+        # Exclude jobs referencing India or Pakistan
+        country_blacklist = [r'\bpakistan\b', r'\bpakistani\b', r'\bindia\b', r'\bindian\b', r'\bpkr\b', r'\binr\b']
+        if any(re.search(pat, clean_text) for pat in country_blacklist):
+            continue
         
         # Smart, relaxed keyword checking
         match_found = False

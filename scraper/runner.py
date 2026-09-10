@@ -9,6 +9,17 @@ import logging
 
 logger = logging.getLogger("jobhunt")
 
+ALLOWED_REGIONS = [
+    "Americas",
+    "Europe",
+    "Oceania",
+    "Africa",
+    "Eastern Asia",
+    "Western Asia",
+    "South-Eastern Asia",
+    "Central Asia"
+]
+
 payload = {
     "query": """
   query VisitorJobSearch($requestVariables: VisitorJobSearchV1Request!) {
@@ -128,6 +139,7 @@ payload = {
             "sort": "recency",
             "highlight": True,
             "jobType": "fixed",
+            "location": ALLOWED_REGIONS,
             "paging": {
                 "offset": 0,
                 "count": 20
@@ -136,11 +148,12 @@ payload = {
     }
 }
 
-def run_scraper(keyword="python", count=10, force_refresh=False):
+def run_scraper(keyword="python", count=10, force_refresh=False, location=None):
     # Dynamically update the payload
     payload["variables"]["requestVariables"]["userQuery"] = keyword
     payload["variables"]["requestVariables"]["paging"]["count"] = count
     payload["variables"]["requestVariables"]["jobType"] = "fixed"
+    payload["variables"]["requestVariables"]["location"] = location if location is not None else ALLOWED_REGIONS
 
     # UpworkClient now handles loading from session.json automatically
     client = UpworkClient()

@@ -12,3 +12,8 @@ CHANNEL_ID = int(_channel_id_env) if _channel_id_env and _channel_id_env.isdigit
 
 # How often (in minutes) to poll Upwork for new jobs per tracked keyword
 REFRESH_INTERVAL = 1
+
+# Maximum job age in hours to consider (default: 1.0 hour)
+_max_age_env = os.getenv("MAX_JOB_AGE_HOURS")
+MAX_JOB_AGE_HOURS = float(_max_age_env) if _max_age_env else 1.0
+

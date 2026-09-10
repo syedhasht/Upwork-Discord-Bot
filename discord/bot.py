@@ -119,7 +119,8 @@ async def _fetch_and_post(keyword: str, channel: discord.TextChannel):
     try:
         loop = asyncio.get_event_loop()
         raw_jobs = await loop.run_in_executor(None, bridge.get_jobs, keyword, 50)
-        filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword)
+        max_age = getattr(config, "MAX_JOB_AGE_HOURS", 1.0)
+        filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword, max_age_hours=max_age)
         filtered_jobs.sort(key=lambda x: x.get("created_at_raw") or "")
         
         # Check if this is the first scan (0 jobs in DB for this keyword)
@@ -129,13 +130,13 @@ async def _fetch_and_post(keyword: str, channel: discord.TextChannel):
         posted_updated = 0
 
         if is_initial:
-            logger.info(f"[{keyword}] Initial scan detected. Saving all {len(filtered_jobs)} matching jobs, but only posting the 5 newest to prevent spam.")
-            # Save all jobs to DB so they are marked as seen, but only post the 5 newest
-            for job in filtered_jobs:
-                job["keyword"] = keyword
-                is_new_job(job, keyword)
+            logger.info(f"[{keyword}] Initial scan detected. Found {len(filtered_jobs)} job(s) within max {max_age}h.")
+            # Record all fetched raw jobs into DB so older ones are marked as seen
+            for raw_j in raw_jobs:
+                raw_j["keyword"] = keyword
+                database.save_job(raw_j)
             
-            # Post only the 5 newest
+            # Post only matching jobs that are <= max_age_hours (up to 5 newest)
             to_post_initial = filtered_jobs[-5:]
             for job in to_post_initial:
                 embed = format_job(job, is_update=False)
@@ -216,19 +217,21 @@ async def tracking(ctx):
 
 @bot.command()
 async def search(ctx, *, keyword: str):
-    await ctx.send(f"🔍 Searching Upwork for: `{keyword}`...")
+    max_age = getattr(config, "MAX_JOB_AGE_HOURS", 1.0)
+    age_label = f"{int(max_age)}h" if max_age.is_integer() else f"{max_age}h"
+    await ctx.send(f"🔍 Searching Upwork for: `{keyword}` (max {age_label} old)...")
     try:
         loop = asyncio.get_event_loop()
         raw_jobs = await loop.run_in_executor(None, bridge.get_jobs, keyword, 50)
-        filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword)
+        filtered_jobs = filter_jobs(raw_jobs, min_budget=0, keyword=keyword, max_age_hours=max_age)
         filtered_jobs.sort(key=lambda x: x.get("created_at_raw") or "")
         
-        # Display the 10 newest jobs directly without calling is_new_job.
+        # Display the newest jobs directly without calling is_new_job.
         # This prevents filtering out already-scraped jobs or modifying DB.
         to_post = filtered_jobs[-10:]
         
         if not to_post:
-            await ctx.send("No matching jobs found on Upwork.")
+            await ctx.send(f"No matching jobs found on Upwork within the last {age_label}.")
             return
             
         for job in to_post:
