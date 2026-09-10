@@ -23,11 +23,11 @@ def is_new_job(job: dict, keyword: str = None) -> str:
     # Ensure job dict has the correct keyword for database operations
     job["keyword"] = keyword
 
-    existing = database.get_job(job_id)
+    existing = database.get_job_by_keyword(job_id, keyword)
     
     if not existing:
-        # Check if a job with same Description/Budget already exists in DB
-        content_match = database.get_job_by_content(job.get("description"), job.get("budget"))
+        # Check if a job with same Description/Budget already exists for this keyword in DB
+        content_match = database.get_job_by_content(job.get("description"), job.get("budget"), keyword=keyword)
         
         # Always save the job so its ID is recorded in the DB
         database.save_job(job)

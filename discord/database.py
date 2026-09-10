@@ -144,17 +144,23 @@ def count_jobs_by_keyword(keyword: str) -> int:
 
 
 
-def get_job_by_content(description: str, budget: str) -> dict:
+def get_job_by_content(description: str, budget: str, keyword: str = None) -> dict:
     """
-    Finds a job by its description and budget globally in the DB.
+    Finds a job by its description and budget in the DB, optionally scoped to a keyword.
     Used for the 'Swap Rule' to detect reposts.
     """
     with _get_connection() as conn:
         conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT * FROM posted_jobs WHERE description = ? AND budget = ?", 
-            (description, budget)
-        ).fetchone()
+        if keyword:
+            row = conn.execute(
+                "SELECT * FROM posted_jobs WHERE description = ? AND budget = ? AND LOWER(keyword) = ?", 
+                (description, budget, keyword.lower())
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM posted_jobs WHERE description = ? AND budget = ?", 
+                (description, budget)
+            ).fetchone()
     return dict(row) if row else None
 
 
@@ -185,21 +191,39 @@ def save_job(job: dict, is_update: bool = False):
             keyword = keyword.lower()
         
         if is_update:
-            conn.execute(
-                """
-                UPDATE posted_jobs 
-                SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?
-                WHERE job_id = ?
-                """,
-                (
-                    job.get("title"),
-                    job.get("budget"),
-                    job.get("description"),
-                    job.get("raw_json"),
-                    now,
-                    job.get("id")
+            if keyword:
+                conn.execute(
+                    """
+                    UPDATE posted_jobs 
+                    SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?
+                    WHERE job_id = ? AND LOWER(keyword) = ?
+                    """,
+                    (
+                        job.get("title"),
+                        job.get("budget"),
+                        job.get("description"),
+                        job.get("raw_json"),
+                        now,
+                        job.get("id"),
+                        keyword
+                    )
                 )
-            )
+            else:
+                conn.execute(
+                    """
+                    UPDATE posted_jobs 
+                    SET title = ?, budget = ?, description = ?, raw_json = ?, is_updated = 1, updated_at = ?
+                    WHERE job_id = ?
+                    """,
+                    (
+                        job.get("title"),
+                        job.get("budget"),
+                        job.get("description"),
+                        job.get("raw_json"),
+                        now,
+                        job.get("id")
+                    )
+                )
 
         else:
             conn.execute(

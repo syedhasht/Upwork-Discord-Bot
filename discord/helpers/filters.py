@@ -3,13 +3,18 @@ import re
 def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python") -> list:
     """
     Filters out jobs that:
-    1. Do not match the target keyword (using flexible matching) in title/description/skills.
-    2. Fall strictly below the target minimum budget (when a parseable budget is found).
+    1. Are hourly jobs (only fixed-price jobs allowed).
+    2. Do not match the target keyword (using flexible matching) in title/description/skills.
+    3. Fall strictly below the target minimum budget (when a parseable budget is found).
     """
     filtered = []
     kw_clean = keyword.lower().strip()
     
     for job in jobs:
+        # Exclude hourly jobs
+        job_type = str(job.get("job_type", "")).upper()
+        if job_type == "HOURLY" or "/ hr" in str(job.get("budget", "")).lower():
+            continue
         # Strip Upwork's H^word^H highlight markers before matching
         skills_list = job.get('skills') or []
         skills_str = " ".join(skills_list)
@@ -25,6 +30,12 @@ def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python") ->
             has_voice = any(w in clean_text for w in ["voice", "audio", "calling", "receptionist", "caller", "telephony", "vapi", "retell", "bland", "elevenlabs", "speech", "tts", "stt"])
             has_ai = any(w in clean_text for w in ["ai", "artificial intelligence", "agent", "bot", "assistant", "llm", "openai", "claude"])
             if ("ai voice agent" in clean_text) or (has_voice and has_ai):
+                match_found = True
+        elif kw_clean in ["chatbot", "chat bot"]:
+            # For chatbot, match "chatbot", "chat bot", or conversational + bot/agent
+            has_bot = "bot" in clean_text or "agent" in clean_text
+            has_chat = "chat" in clean_text or "conversational" in clean_text
+            if ("chatbot" in clean_text) or ("chat bot" in clean_text) or (has_chat and has_bot):
                 match_found = True
         elif kw_clean == "machine learning":
             # For machine learning, match if "machine learning" is present,

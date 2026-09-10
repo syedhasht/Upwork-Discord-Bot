@@ -98,8 +98,8 @@ def parse_jobs(response_json):
                 "job_type": job_info.get("jobType", "N/A"),
                 "budget": budget,
                 "skills": skills,
-                "created_at_raw": job_info.get("createTime") or job_info.get("publishTime"),
-                "posted_on": _format_publish_time(job_info.get("createTime") or job_info.get("publishTime")),
+                "created_at_raw": job_info.get("publishTime") or job_info.get("createTime"),
+                "posted_on": _format_publish_time(job_info.get("publishTime") or job_info.get("createTime")),
                 "link": f"https://www.upwork.com/jobs/{job_info.get('ciphertext', '')}",
                 "raw_json": json.dumps(result) # Store the full result object for this job
             })

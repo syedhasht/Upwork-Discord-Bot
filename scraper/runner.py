@@ -127,6 +127,7 @@ payload = {
             "userQuery": "python",
             "sort": "recency",
             "highlight": True,
+            "jobType": "fixed",
             "paging": {
                 "offset": 0,
                 "count": 20
@@ -139,6 +140,7 @@ def run_scraper(keyword="python", count=10, force_refresh=False):
     # Dynamically update the payload
     payload["variables"]["requestVariables"]["userQuery"] = keyword
     payload["variables"]["requestVariables"]["paging"]["count"] = count
+    payload["variables"]["requestVariables"]["jobType"] = "fixed"
 
     # UpworkClient now handles loading from session.json automatically
     client = UpworkClient()
