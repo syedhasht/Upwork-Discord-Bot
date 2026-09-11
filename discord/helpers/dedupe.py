@@ -8,10 +8,12 @@ import database
 def is_new_job(job: dict, keyword: str = None) -> str:
     """
     Checks if a job is new, updated, or a duplicate.
+    Rule: A job (by job_id) can ONLY belong to one category.
+    If it already exists in another category, it will NOT be posted to any other category.
     Returns:
-        "new"     -> If ID + keyword is not in DB.
-        "updated" -> If ID + keyword is in DB but budget or description changed.
-        None      -> If it's a perfect duplicate.
+        "new"     -> If job_id is NOT in DB anywhere.
+        "updated" -> If job_id is in DB under THIS SAME category and budget or description changed.
+        None      -> If job_id already belongs to another category, or is a duplicate within this category.
     """
     job_id = job.get("id")
     if not job_id:
@@ -23,33 +25,40 @@ def is_new_job(job: dict, keyword: str = None) -> str:
     # Ensure job dict has the correct keyword for database operations
     job["keyword"] = keyword
 
-    existing = database.get_job_by_keyword(job_id, keyword)
+    # 1. Check if job_id already exists anywhere in the database (any category)
+    existing = database.get_job(job_id)
     
-    if not existing:
-        # Check if a job with same Description/Budget already exists for this keyword in DB
-        content_match = database.get_job_by_content(job.get("description"), job.get("budget"), keyword=keyword)
-        
-        # Always save the job so its ID is recorded in the DB
-        database.save_job(job)
-        
-        if content_match:
-            # Content already exists in DB (duplicate posting or repost).
-            # Do not post a duplicate notification to Discord.
+    if existing:
+        existing_kw = (existing.get("keyword") or "").lower()
+        current_kw = keyword.lower()
+
+        # If already claimed by another category, strictly do not post in this category!
+        if existing_kw != current_kw:
             return None
+
+        # If it belongs to this same category, check for updates in budget or description
+        old_budget = str(existing.get("budget") or "").strip()
+        new_budget = str(job.get("budget") or "").strip()
         
-        return "new"
+        old_desc = str(existing.get("description") or "").strip()
+        new_desc = str(job.get("description") or "").strip()
 
-    # Check for updates in budget or description
-    # (Using .strip() and string conversion to avoid trivial mismatches)
-    old_budget = str(existing.get("budget") or "").strip()
-    new_budget = str(job.get("budget") or "").strip()
+        if old_budget != new_budget or old_desc != new_desc:
+            database.save_job(job, is_update=True)
+            return "updated"
+
+        return None
+
+    # 2. Job ID is completely new to the system:
+    # Check if a job with same Description/Budget already exists in DB
+    content_match = database.get_job_by_content(job.get("description"), job.get("budget"))
     
-    old_desc = str(existing.get("description") or "").strip()
-    new_desc = str(job.get("description") or "").strip()
-
-    if old_budget != new_budget or old_desc != new_desc:
-        database.save_job(job, is_update=True)
-        return "updated"
-
-    return None
+    # Save the job so its ID and category are recorded in the DB
+    database.save_job(job)
+    
+    if content_match:
+        # Content already exists in DB (repost under new ID). Do not post duplicate.
+        return None
+    
+    return "new"
 

@@ -131,17 +131,15 @@ async def _fetch_and_post(keyword: str, channel: discord.TextChannel):
 
         if is_initial:
             logger.info(f"[{keyword}] Initial scan detected. Found {len(filtered_jobs)} job(s) within max {max_age}h.")
-            # Record all fetched raw jobs into DB so older ones are marked as seen
-            for raw_j in raw_jobs:
-                raw_j["keyword"] = keyword
-                database.save_job(raw_j)
-            
-            # Post only matching jobs that are <= max_age_hours (up to 5 newest)
+            # Post matching jobs that are <= max_age_hours (up to 5 newest)
             to_post_initial = filtered_jobs[-5:]
             for job in to_post_initial:
-                embed = format_job(job, is_update=False)
-                await channel.send(embed=embed)
-                posted_new += 1
+                job["keyword"] = keyword
+                status = is_new_job(job, keyword)
+                if status:
+                    embed = format_job(job, is_update=False)
+                    await channel.send(embed=embed)
+                    posted_new += 1
         else:
             # Process all matching jobs and post everything that is new or updated
             for job in filtered_jobs:
