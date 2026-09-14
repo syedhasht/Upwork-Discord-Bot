@@ -4,8 +4,8 @@ import datetime
 def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python", max_age_hours: float = 1.0) -> list:
     """
     Filters out jobs that:
-    1. Are hourly jobs (only fixed-price jobs allowed).
-    2. Are older than max_age_hours (default: max 1 hour old).
+    1. Are older than max_age_hours (default: max 1 hour old).
+    2. Reference blacklisted locations (Pakistan, India).
     3. Do not match the target keyword (using flexible matching) in title/description/skills.
     4. Fall strictly below the target minimum budget (when a parseable budget is found).
     """
@@ -14,11 +14,6 @@ def filter_jobs(jobs: list, min_budget: float = 0.0, keyword: str = "python", ma
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     
     for job in jobs:
-        # Exclude hourly jobs
-        job_type = str(job.get("job_type", "")).upper()
-        if job_type == "HOURLY" or "/ hr" in str(job.get("budget", "")).lower():
-            continue
-
         # Exclude jobs older than max_age_hours (default: max 1 hour old)
         if max_age_hours is not None and max_age_hours > 0:
             raw_time = job.get("created_at_raw")

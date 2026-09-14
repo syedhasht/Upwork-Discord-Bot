@@ -136,6 +136,12 @@ class UpworkClient:
             logger.error(f"Network error during fetch: {e}")
             if retry_count < MAX_RETRIES:
                 time.sleep(5)
+                # Re-initialize session to reset any dropped sockets
+                try:
+                    self.session.close()
+                except Exception:
+                    pass
+                self.session = requests.Session(impersonate="chrome110")
                 return self.fetch_jobs(payload, retry_count + 1)
             return None
 

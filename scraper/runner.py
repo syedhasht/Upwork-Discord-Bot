@@ -138,7 +138,6 @@ payload = {
             "userQuery": "python",
             "sort": "recency",
             "highlight": True,
-            "jobType": "fixed",
             "location": ALLOWED_REGIONS,
             "paging": {
                 "offset": 0,
@@ -148,11 +147,14 @@ payload = {
     }
 }
 
-def run_scraper(keyword="python", count=10, force_refresh=False, location=None):
+def run_scraper(keyword="python", count=10, force_refresh=False, location=None, job_type=None):
     # Dynamically update the payload
     payload["variables"]["requestVariables"]["userQuery"] = keyword
     payload["variables"]["requestVariables"]["paging"]["count"] = count
-    payload["variables"]["requestVariables"]["jobType"] = "fixed"
+    if job_type:
+        payload["variables"]["requestVariables"]["jobType"] = job_type
+    else:
+        payload["variables"]["requestVariables"].pop("jobType", None)
     payload["variables"]["requestVariables"]["location"] = location if location is not None else ALLOWED_REGIONS
 
     # UpworkClient now handles loading from session.json automatically
