@@ -29,10 +29,58 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter('[%(asctime)s] [%(levelname)-8s] %(message)s', '%Y-%m-%d %H:%M:%S'))
 logger.addHandler(handler)
 
-def _write_config(token: str, cookies: list, user_agent: str):
+FALLBACK_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+               "AppleWebKit/537.36 (KHTML, like Gecko) "
+               "Chrome/120.0.0.0 Safari/537.36")
+
+# Runs inside the solving browser. These are the values it sends as User-Agent and sec-ch-ua*.
+# Kept to one `return JSON.stringify(...)` line: sb.execute_script runs it as a function body
+# over WebDriver but as a bare expression over CDP (which only strips a trailing `return`).
+IDENTITY_JS = (
+    "return JSON.stringify({"
+    "ua: navigator.userAgent, "
+    "brands: navigator.userAgentData ? navigator.userAgentData.brands"
+    ".map(b => '\"' + b.brand + '\";v=\"' + b.version + '\"').join(', ') : '', "
+    "platform: navigator.userAgentData ? navigator.userAgentData.platform : '', "
+    "mobile: navigator.userAgentData ? navigator.userAgentData.mobile : false})"
+)
+
+def _read_browser_identity(sb) -> dict:
+    """
+    Returns the request headers that identify the solving browser (user-agent + client hints).
+    cf_clearance is issued to one specific browser, so the HTTP client must present the same
+    identity rather than a hardcoded one.
+    """
+    try:
+        info = json.loads(sb.execute_script(IDENTITY_JS))
+        ua =(info.get("ua") or "").replace("HeadlessChrome", "Chrome")
+        if not ua:
+            raise ValueError("empty user-agent")
+    except Exception as e:
+        logger.warning(f"Could not read browser identity ({e}). Falling back to a fixed user-agent.")
+        return {"user-agent": FALLBACK_UA}
+
+    identity = {"user-agent": ua}
+    if info.get("brands"):
+        identity["sec-ch-ua"] = info["brands"]
+        identity["sec-ch-ua-mobile"] = "?1" if info.get("mobile") else "?0"
+        identity["sec-ch-ua-platform"] = f'"{info.get("platform") or "Windows"}"'
+    logger.info(f"Browser identity: {ua}")
+    return identity
+
+def _write_config(token: str, cookies: list, identity: dict):
     cookie_dict = {c["name"]: c["value"] for c in cookies}
     timestamp   = time.strftime("%Y-%m-%d %H:%M:%S")
     auth_value  = f"Bearer {token}" if not token.startswith("Bearer ") else token
+
+    headers = {
+        "authorization": auth_value,
+        **identity,
+        "accept": "*/*",
+        "content-type": "application/json",
+        "x-upwork-api-tenantid": ""
+    }
+    header_lines = "".join(f"    {k!r}: {v!r},\n" for k, v in headers.items())
 
     # 1. Update config.py (Python backup)
     content = f'''# ===========================================================================
@@ -41,26 +89,15 @@ def _write_config(token: str, cookies: list, user_agent: str):
 # ===========================================================================
 
 HEADERS = {{
-    "authorization": {repr(auth_value)},
-    "user-agent":    {repr(user_agent)},
-    "accept":        "*/*",
-    "content-type":  "application/json",
-    "x-upwork-api-tenantid": ""
-}}
+{header_lines}}}
 
 COOKIES = {repr(cookie_dict)}
 '''
     CONFIG_PATH.write_text(content, encoding="utf-8")
-    
+
     # 2. Update session.json (Professional standard)
     session_data = {
-        "headers": {
-            "authorization": auth_value,
-            "user-agent": user_agent,
-            "accept": "*/*",
-            "content-type": "application/json",
-            "x-upwork-api-tenantid": ""
-        },
+        "headers": headers,
         "cookies": cookie_dict,
         "updated_at": timestamp
     }
@@ -100,10 +137,6 @@ def solve_cloudflare(max_retries=3):
                 logger.info("Extracting cookies...")
                 raw = sb.driver.get_cookies()
 
-                ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0.0.0 Safari/537.36")
-
                 cookies = [{"name": c["name"], "value": c["value"]} for c in raw]
                 token   = next((c["value"] for c in raw if c["name"] == "UniversalSearchNuxt_vt"), "")
                 cf_ok   = any(c["name"] == "cf_clearance" for c in raw)
@@ -111,7 +144,7 @@ def solve_cloudflare(max_retries=3):
                 logger.info(f"Cookies: {len(cookies)} | cf_clearance: {cf_ok} | token: {bool(token)}")
 
                 if token and cf_ok:
-                    _write_config(token, cookies, ua)
+                    _write_config(token, cookies, _read_browser_identity(sb))
                     success = True
                     logger.info("Cloudflare bypass successful.")
                     try:

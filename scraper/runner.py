@@ -1,4 +1,4 @@
-from core.client import UpworkClient
+from core.client import UpworkClient, blocked_for
 try:
     from core.config import HEADERS, COOKIES
 except ImportError:
@@ -148,6 +148,12 @@ payload = {
 }
 
 def run_scraper(keyword="python", count=10, force_refresh=False, location=None, job_type=None):
+    # While Upwork is blocking us the client is paused; skip quietly instead of piling on.
+    cooldown = blocked_for()
+    if cooldown > 0:
+        logger.debug(f"Skipping '{keyword}': Upwork block cooldown, {cooldown / 60:.1f} min left.")
+        return []
+
     # Dynamically update the payload
     payload["variables"]["requestVariables"]["userQuery"] = keyword
     payload["variables"]["requestVariables"]["paging"]["count"] = count
@@ -163,7 +169,8 @@ def run_scraper(keyword="python", count=10, force_refresh=False, location=None, 
     response = client.fetch_jobs(payload, force_refresh=force_refresh)
 
     if response is None:
-        logger.error(f"Failed to fetch jobs for '{keyword}'. Network error or timeout.")
+        if blocked_for() == 0:  # a cooldown that began mid-fetch has already been logged
+            logger.error(f"Failed to fetch jobs for '{keyword}'. Network error, timeout or no usable session.")
         return []
 
     logger.debug(f"Upwork response status: {response.status_code}")
