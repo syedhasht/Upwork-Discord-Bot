@@ -30,6 +30,9 @@ The bot operates on a dynamic, high-performance cycle designed to mimic human be
 
 ## 📂 Project Structure
 
+### 🚪 Entry Point (project root)
+*   **`main.py`**: The "Ignition." Sets up logging, initializes the database and starts the bot. Run it from the project root.
+
 ### 🤖 Discord Layer (`/discord`)
 *   **`bot.py`**: The "Brain." Manages commands and the human-like polling loop.
 *   **`database.py`**: The "Memory." Manages SQLite storage for jobs and tracking history.
@@ -80,8 +83,8 @@ BOT_TOKEN=your_discord_bot_token_here
 Optional: `UPWORK_IMPERSONATE=chrome110` pins the `curl_cffi` TLS profile instead of auto-matching the solver's Chrome version.
 
 ### 4. Run
+From the project root (no need to `cd` anywhere else):
 ```bash
-cd discord
 python main.py
 ```
 

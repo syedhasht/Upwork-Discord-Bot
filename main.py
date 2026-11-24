@@ -1,11 +1,21 @@
+import sys
 import logging
+from pathlib import Path
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# main.py lives in the project root; the bot modules (bot, config, database,
+# helpers, bridge) live in discord/, so put that folder on the import path.
+ROOT_DIR = Path(__file__).resolve().parent
+DISCORD_DIR = ROOT_DIR / "discord"
+if str(DISCORD_DIR) not in sys.path:
+    sys.path.insert(0, str(DISCORD_DIR))
+
 import config
 import database
 from bot import bot
-from pathlib import Path
 
 # ── Logging Setup ────────────────────────────────────────────────────────────
-LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+LOG_DIR = ROOT_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "bot.log"
 
